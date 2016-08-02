@@ -1,5 +1,11 @@
 from bitcoinrpc.connection import BitcoinConnection
+from bitcoinrpc.exceptions import BitcoinException
+from subprocess import Popen
 from decimal import Decimal
+import atexit
+from time import sleep
+from socket import error as sock_err
+
 
 RPC_UNAME = 'btcapi'
 RPC_PWD = 'btcapipwd'
@@ -8,6 +14,20 @@ RPC_PWD = 'btcapipwd'
 class BTCMgr(object):
     def __init__(self, uname=RPC_UNAME, pwd=RPC_PWD):
         self.connection = BitcoinConnection(uname, pwd, host='127.0.0.1', port=18332)
+        self.daemon = Popen(['bitcoind', '-regtest', '-rpcuser={0}'.format(uname), '-rpcpassword={0}'.format(pwd)])
+        while True:
+            try:
+                self.get_balance()
+                break
+            except (sock_err, BitcoinException):
+                sleep(0.1)
+                continue
+
+        @atexit.register
+        def onexit():
+            if self.daemon:
+                self.daemon.terminate()
+                self.daemon = None
 
     def _test_get_pubkeys(self, amount):
         """
@@ -70,6 +90,11 @@ class BTCMgr(object):
     def get_transactions(self):
         return self.connection.proxy.listtransactions()
 
+    def __del__(self):
+        if self.daemon:
+            self.daemon.terminate()
+            self.daemon = None
+
 
 if __name__ == '__main__':
     m = BTCMgr()
@@ -92,3 +117,4 @@ if __name__ == '__main__':
 
     print(m.get_balance())
     print(m.get_transactions())
+
