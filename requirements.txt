@@ -1,0 +1,1 @@
+bitcoin-python==0.3
