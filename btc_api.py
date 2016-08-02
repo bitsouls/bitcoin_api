@@ -5,6 +5,7 @@ from decimal import Decimal
 import atexit
 from time import sleep
 from socket import error as sock_err
+from shutil import rmtree
 
 
 RPC_UNAME = 'btcapi'
@@ -14,7 +15,7 @@ RPC_PWD = 'btcapipwd'
 class BTCMgr(object):
     def __init__(self, uname=RPC_UNAME, pwd=RPC_PWD):
         self.connection = BitcoinConnection(uname, pwd, host='127.0.0.1', port=18332)
-        self.daemon = Popen(['bitcoind', '-regtest', '-rpcuser={0}'.format(uname), '-rpcpassword={0}'.format(pwd)])
+        self.daemon = Popen(['bitcoind', '-regtest', '-datadir=.', '-rpcuser={0}'.format(uname), '-rpcpassword={0}'.format(pwd)])
         while True:
             try:
                 self.get_balance()
@@ -97,8 +98,11 @@ class BTCMgr(object):
 
 
 if __name__ == '__main__':
+    rmtree('./regtest', ignore_errors=True)
+
     m = BTCMgr()
 
+    m.connection.proxy.generate(101)
     addr1 = m.make_address('acc1')
     addr2 = m.make_address('acc2')
 
